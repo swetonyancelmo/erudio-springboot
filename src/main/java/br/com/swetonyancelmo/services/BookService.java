@@ -23,11 +23,13 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 @Service
 public class BookService {
 
-    @Autowired
     private BookRepository repository;
-
-    @Autowired
     private PagedResourcesAssembler<BookDTO> assembler;
+
+    public BookService(BookRepository repository, PagedResourcesAssembler<BookDTO> assembler) {
+        this.repository = repository;
+        this.assembler = assembler;
+    }
 
     public PagedModel<EntityModel<BookDTO>> findAll(Pageable pageable){
         Page<Book> books = repository.findAll(pageable);
