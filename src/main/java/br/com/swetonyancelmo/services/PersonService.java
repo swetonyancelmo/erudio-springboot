@@ -2,8 +2,12 @@ package br.com.swetonyancelmo.services;
 
 import br.com.swetonyancelmo.controllers.PersonController;
 import br.com.swetonyancelmo.data.dto.PersonDTO;
+import br.com.swetonyancelmo.exception.BadRequestException;
+import br.com.swetonyancelmo.exception.FileStorageException;
 import br.com.swetonyancelmo.exception.RequiredObjectIsNullException;
 import br.com.swetonyancelmo.exception.ResourceNotFoundException;
+import br.com.swetonyancelmo.file.importer.contract.FileImporter;
+import br.com.swetonyancelmo.file.importer.factory.FileImporterFactory;
 import br.com.swetonyancelmo.model.Person;
 import br.com.swetonyancelmo.repository.PersonRepository;
 import jakarta.transaction.Transactional;
@@ -16,7 +20,13 @@ import org.springframework.hateoas.Link;
 import org.springframework.hateoas.PagedModel;
 import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.List;
+import java.util.Optional;
 import java.util.logging.Logger;
 
 import static br.com.swetonyancelmo.mapper.ObjectMapper.parseObject;
@@ -30,6 +40,9 @@ public class PersonService {
 
     @Autowired
     private PersonRepository repository;
+
+    @Autowired
+    private FileImporterFactory importer;
 
     @Autowired
     PagedResourcesAssembler<PersonDTO> assembler;
@@ -67,6 +80,34 @@ public class PersonService {
         var dto = parseObject(repository.save(entity), PersonDTO.class);
         addHateoasLinks(dto);
         return dto;
+    }
+
+    public List<PersonDTO> massCreation(MultipartFile file) throws Exception {
+        logger.info("Importing People from File!");
+
+        if(file.isEmpty()) {
+            throw new BadRequestException("Please set a valid File");
+        }
+
+        try(InputStream inputStream = file.getInputStream()) {
+            String fileName = Optional.ofNullable(file.getOriginalFilename())
+                    .orElseThrow(() -> new BadRequestException("File name cannot be null"));
+            FileImporter importer = this.importer.getImporter(fileName);
+
+            List<Person> entities = importer.importFile(inputStream).stream()
+                    .map(dto -> repository.save(parseObject(dto, Person.class)))
+                    .toList();
+
+            return entities.stream()
+                    .map(entity -> {
+                            var dto = parseObject(entity, PersonDTO.class);
+                            addHateoasLinks(dto);
+                            return dto;
+                    })
+                    .toList();
+        } catch (Exception e) {
+            throw new FileStorageException("Error processing the file!");
+        }
     }
 
     public PersonDTO update(PersonDTO person) {
