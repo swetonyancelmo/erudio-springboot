@@ -6,12 +6,16 @@ import br.com.swetonyancelmo.exception.BadRequestException;
 import br.com.swetonyancelmo.exception.FileStorageException;
 import br.com.swetonyancelmo.exception.RequiredObjectIsNullException;
 import br.com.swetonyancelmo.exception.ResourceNotFoundException;
+import br.com.swetonyancelmo.file.exporter.MediaTypes;
+import br.com.swetonyancelmo.file.exporter.contract.FileExporter;
+import br.com.swetonyancelmo.file.exporter.factory.FileExporterFactory;
 import br.com.swetonyancelmo.file.importer.contract.FileImporter;
 import br.com.swetonyancelmo.file.importer.factory.FileImporterFactory;
 import br.com.swetonyancelmo.model.Person;
 import br.com.swetonyancelmo.repository.PersonRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PagedResourcesAssembler;
@@ -45,6 +49,9 @@ public class PersonService {
     private FileImporterFactory importer;
 
     @Autowired
+    private FileExporterFactory exporter;
+
+    @Autowired
     PagedResourcesAssembler<PersonDTO> assembler;
 
     public PagedModel<EntityModel<PersonDTO>> findAll(Pageable pageable) {
@@ -72,6 +79,21 @@ public class PersonService {
         return dto;
     }
 
+    public Resource exportPage(Pageable pageable, String acceptHeader) {
+        logger.info("Exporting a People page!");
+
+        var people = repository.findAll(pageable)
+                .map(person -> parseObject(person, PersonDTO.class))
+                .getContent();
+
+        try {
+            FileExporter exporter = this.exporter.getExporter(acceptHeader);
+            return exporter.exportFile(people);
+        } catch (Exception e) {
+            throw new RuntimeException("Error during file export!", e);
+        }
+    }
+
     public PersonDTO create(PersonDTO person) {
         if(person == null) throw  new RequiredObjectIsNullException();
 
@@ -82,17 +104,15 @@ public class PersonService {
         return dto;
     }
 
-    public List<PersonDTO> massCreation(MultipartFile file) throws Exception {
-        logger.info("Importing People from File!");
+    public List<PersonDTO> massCreation(MultipartFile file) {
+        logger.info("Importing People from file!");
 
-        if(file.isEmpty()) {
-            throw new BadRequestException("Please set a valid File");
-        }
+        if (file.isEmpty()) throw new BadRequestException("Please set a Valid File!");
 
-        try(InputStream inputStream = file.getInputStream()) {
-            String fileName = Optional.ofNullable(file.getOriginalFilename())
+        try(InputStream inputStream = file.getInputStream()){
+            String filename = Optional.ofNullable(file.getOriginalFilename())
                     .orElseThrow(() -> new BadRequestException("File name cannot be null"));
-            FileImporter importer = this.importer.getImporter(fileName);
+            FileImporter importer = this.importer.getImporter(filename);
 
             List<Person> entities = importer.importFile(inputStream).stream()
                     .map(dto -> repository.save(parseObject(dto, Person.class)))
@@ -100,9 +120,9 @@ public class PersonService {
 
             return entities.stream()
                     .map(entity -> {
-                            var dto = parseObject(entity, PersonDTO.class);
-                            addHateoasLinks(dto);
-                            return dto;
+                        var dto = parseObject(entity, PersonDTO.class);
+                        addHateoasLinks(dto);
+                        return dto;
                     })
                     .toList();
         } catch (Exception e) {
@@ -171,9 +191,16 @@ public class PersonService {
         dto.add(linkTo(methodOn(PersonController.class).findAll(1, 12, "asc")).withRel("findAll").withType("GET"));
         dto.add(linkTo(methodOn(PersonController.class).findByName("",1, 12, "asc")).withRel("findByName").withType("GET"));
         dto.add(linkTo(methodOn(PersonController.class).create(dto)).withRel("create").withType("POST"));
+        dto.add(linkTo(methodOn(PersonController.class)).slash("massCreation").withRel("massCreation").withType("POST"));
         dto.add(linkTo(methodOn(PersonController.class).update(dto)).withRel("update").withType("PUT"));
         dto.add(linkTo(methodOn(PersonController.class).disablePerson(dto.getId())).withRel("disable").withType("PATCH"));
         dto.add(linkTo(methodOn(PersonController.class).delete(dto.getId())).withRel("delete").withType("DELETE"));
+
+        dto.add(linkTo(methodOn(PersonController.class).exportPage(1, 12, "asc", null))
+                .withRel("exportPage")
+                .withType("GET")
+                .withTitle("Export People")
+        );
     }
 
 }
