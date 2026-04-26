@@ -34,6 +34,7 @@
 		<commons-csv.version>1.14.1</commons-csv.version>
 		<jasperreports.version>7.0.6</jasperreports.version>
 		<jasperreports-fonts.version>7.0.6</jasperreports-fonts.version>
+		<zxing.version>3.5.4</zxing.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -85,6 +86,18 @@
 			<groupId>net.sf.jasperreports</groupId>
 			<artifactId>jasperreports-pdf</artifactId>
 			<version>${jasperreports.version}</version>
+			<scope>compile</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.google.zxing</groupId>
+			<artifactId>core</artifactId>
+			<version>${zxing.version}</version>
+			<scope>compile</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.google.zxing</groupId>
+			<artifactId>javase</artifactId>
+			<version>${zxing.version}</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
