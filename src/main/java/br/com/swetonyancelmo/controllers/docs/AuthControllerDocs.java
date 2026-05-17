@@ -1,0 +1,19 @@
+package br.com.swetonyancelmo.controllers.docs;
+
+import br.com.swetonyancelmo.data.dto.security.AccountCredentialsDTO;
+import io.swagger.v3.oas.annotations.Operation;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+public interface AuthControllerDocs {
+
+    @Operation(summary = "Authenticates an user and returns a token")
+    ResponseEntity<?> signIn(@RequestBody AccountCredentialsDTO credentials);
+
+    @Operation(summary = "Refresh token for authenticated user and returns a token")
+    ResponseEntity<?> refreshToken(@PathVariable("username") String username, @RequestHeader("Authorization") String refreshToken);
+
+    @Operation(summary = "Creating a new User")
+    AccountCredentialsDTO create(@RequestBody AccountCredentialsDTO credentials);
+}
