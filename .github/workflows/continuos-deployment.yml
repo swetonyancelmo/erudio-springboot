@@ -24,5 +24,3 @@ jobs:
         distribution: 'temurin'
         java-version: '21'
         cache: maven
-
-      run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
