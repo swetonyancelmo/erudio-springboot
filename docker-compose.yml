@@ -1,29 +1,77 @@
+#services:
+#  db:
+#    image: mysql:8.0
+#    container_name: mysql_erudio
+#    restart: always
+#    environment:
+#      MYSQL_ROOT_PASSWORD: belmira74
+#      MYSQL_DATABASE: rest_with_springboot_erudio
+#    ports:
+#      - "3307:3306"
+#    volumes:
+#      - mysql_data:/var/lib/mysql
+#
+#  app:
+#    build: .
+#    container_name: spring_app
+#    depends_on:
+#      - db
+#    ports:
+#      - "8080:8080"
+#    environment:
+#      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/rest_with_springboot_erudio?useTimezone=true&serverTimezone=UTC
+#      SPRING_DATASOURCE_USERNAME: root
+#      SPRING_DATASOURCE_PASSWORD: belmira74
+#    volumes:
+#      - ./UploadDir:/estudos/UploadDir
+#
+#volumes:
+#  mysql_data:
+
+
+version: "3.4"
 services:
   db:
     image: mysql:8.0
-    container_name: mysql_erudio
     restart: always
     environment:
+      TZ: America/Sao_Paulo
       MYSQL_ROOT_PASSWORD: belmira74
+      MYSQL_USER: docker
+      MYSQL_PASSWORD: admin123
       MYSQL_DATABASE: rest_with_springboot_erudio
     ports:
       - "3307:3306"
+    expose:
+      - 3306
     volumes:
       - mysql_data:/var/lib/mysql
-
-  app:
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - swetony-network
+  rest-with-springboot-erudio:
     build: .
-    container_name: spring_app
-    depends_on:
-      - db
-    ports:
-      - "8080:8080"
+    image: swetony/rest-with-springboot-erudio:latest
+    restart: always
     environment:
+      TZ: America/Sao_Paulo
       SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/rest_with_springboot_erudio?useTimezone=true&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: belmira74
-    volumes:
-      - ./UploadDir:/estudos/UploadDir
-
+      SERVER_PORT: "80"
+    ports:
+      - "80:80"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - swetony-network
+networks:
+  swetony-network:
+    driver: bridge
 volumes:
   mysql_data:

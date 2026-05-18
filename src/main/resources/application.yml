@@ -1,3 +1,5 @@
+server:
+  port: 80
 cors:
   originPatterns: http://localhost:8080,http://localhost:3000,https://www.erudio.com.br
 file:
@@ -15,9 +17,9 @@ spring:
     name: rest-with-spring-boot-and-java-erudio
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3307/rest_with_springboot_erudio?useTimezone=true&serverTimezone=UTC
-    username: root
-    password: belmira74
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3307/rest_with_springboot_erudio?useTimezone=true&serverTimezone=UTC}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:belmira74}
   jpa:
     hibernate:
       ddl-auto: none
